@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
 
     console.log('Request body:', { user_profile: !!user_profile, current_week_start, customization_requests })
 
-    // Get userId from body or session, fallback to test UUID
-    let authenticatedUserId = userId || user?.id || '00000000-0000-0000-0000-000000000000'
+    // Use the authenticated user ID
+    const authenticatedUserId = user.id
 
     // Build the comprehensive prompt for Claude
     const prompt = buildPlanGenerationPrompt(user_profile, previous_week_analysis, new Date(current_week_start), customization_requests)
@@ -73,14 +73,19 @@ export async function POST(request: NextRequest) {
     console.log('Saving plan to database...')
 
     // Delete existing workouts for this user to avoid conflicts
-    const { error: deleteError } = await supabase
-      .from('workouts')
-      .delete()
-      .eq('user_id', authenticatedUserId)
+    try {
+      const { error: deleteError } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('user_id', authenticatedUserId)
 
-    if (deleteError) {
-      console.error('Error deleting existing workouts:', deleteError)
-      // Continue anyway, don't fail the plan generation
+      if (deleteError) {
+        console.error('Error deleting existing workouts:', deleteError)
+        // Continue anyway, don't fail the plan generation
+      }
+    } catch (deleteErr) {
+      console.error('Exception during workout deletion:', deleteErr)
+      // Continue
     }
 
     const { data: savedPlan, error: saveError } = await supabase

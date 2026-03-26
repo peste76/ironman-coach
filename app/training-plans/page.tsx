@@ -24,10 +24,6 @@ export default function TrainingPlansPage() {
 
   const loadPlans = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    // Safety check: if not logged in, use test UUID
-    const userId = user?.id || '00000000-0000-0000-0000-000000000000'
-    
     if (!user) {
       router.push('/auth/login')
       return
@@ -36,7 +32,7 @@ export default function TrainingPlansPage() {
     const { data, error } = await supabase
       .from('training_plans')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .order('week_start_date', { ascending: false })
 
     if (error) {
@@ -53,19 +49,18 @@ export default function TrainingPlansPage() {
     setGenerating(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
-      // Safety check: if not logged in, use test UUID
-      const userId = user?.id || '00000000-0000-0000-0000-000000000000'
-      
-      console.log("🛠️ Tentativo di salvataggio per UID:", userId)
-      
-      if (!user) throw new Error('Not authenticated')
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+
+      console.log("🛠️ Tentativo di salvataggio per UID:", user.id)
 
       // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from('user_ai_profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .single()
 
       if (profileError || !profile) {
@@ -81,7 +76,7 @@ export default function TrainingPlansPage() {
       const { data: previousPlan } = await supabase
         .from('training_plans')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .eq('week_start_date', lastWeek.toISOString().split('T')[0])
         .maybeSingle()
 
@@ -99,7 +94,7 @@ export default function TrainingPlansPage() {
           user_profile: profile,
           previous_week_analysis: previousPlan?.ai_analysis,
           current_week_start: localDateString,
-          userId: userId,
+          userId: user.id,
         }),
       })
 
