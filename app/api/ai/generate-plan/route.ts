@@ -72,6 +72,9 @@ export async function POST(request: NextRequest) {
     // Save the plan to database
     console.log('Saving plan to database...')
 
+    // Ensure profile exists
+    await supabase.from('profiles').upsert({ id: authenticatedUserId }, { onConflict: 'id' })
+
     // Delete existing workouts for this user to avoid conflicts
     try {
       const { error: deleteError } = await supabase

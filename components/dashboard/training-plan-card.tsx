@@ -24,6 +24,9 @@ export function TrainingPlanCard({ plan, onActivate, onEdit, onDelete }: Trainin
   const generateWorkouts = async () => {
     setGenerating(true)
     try {
+      // Ensure profile exists
+      await supabase.from('profiles').upsert({ id: plan.user_id }, { onConflict: 'id' })
+
       // Create local date properly without timezone shift issues
       const dateString = typeof plan.week_start_date === 'string' ? plan.week_start_date : (plan.week_start_date as Date).toISOString().split('T')[0]
       const [year, month, day] = dateString.split('-').map(Number)
