@@ -89,6 +89,7 @@ export default function TrainingPlansPage() {
           user_profile: profile,
           previous_week_analysis: previousPlan?.ai_analysis,
           current_week_start: localDateString,
+          userId: user.id,
         }),
       })
 

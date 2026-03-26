@@ -29,14 +29,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ClaudePlanRequest = await request.json()
-    const { user_profile, previous_week_analysis, current_week_start, customization_requests } = body
+    const { user_profile, previous_week_analysis, current_week_start, customization_requests, userId } = body
 
     console.log('Request body:', { user_profile: !!user_profile, current_week_start, customization_requests })
 
-    // Validate required data
-    if (!user_profile || !current_week_start) {
-      console.log('Missing required data')
-      return NextResponse.json({ error: "Missing required data" }, { status: 400 })
+    // Get userId from body or session
+    let authenticatedUserId = userId || user?.id
+
+    if (!authenticatedUserId) {
+      console.log('No userId provided and no authenticated user')
+      return NextResponse.json({ error: "Utente non autenticato" }, { status: 401 })
     }
 
     // Build the comprehensive prompt for Claude
@@ -77,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data: savedPlan, error: saveError } = await supabase
       .from('training_plans')
       .insert({
-        user_id: user.id,
+        user_id: authenticatedUserId,
         week_start_date: current_week_start,
         plan_data: planData,
         ai_analysis: previous_week_analysis,

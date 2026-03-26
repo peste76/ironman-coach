@@ -33,6 +33,23 @@ export function TrainingPlanCard({ plan, onActivate, onEdit, onDelete }: Trainin
       // The week_start_date is ALREADY a Monday from the DB.
       const mondayDate = new Date(year, month - 1, day)
 
+      // Delete previous workouts for this user in this week to avoid conflicts
+      const weekEnd = new Date(mondayDate)
+      weekEnd.setDate(mondayDate.getDate() + 6)
+      
+      const { error: deleteError } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('user_id', plan.user_id)
+        .gte('date', mondayDate.toISOString().split('T')[0])
+        .lte('date', weekEnd.toISOString().split('T')[0])
+
+      if (deleteError) {
+        console.error('Error deleting previous workouts:', deleteError)
+        toast.error('Errore nella pulizia dei workout precedenti')
+        return
+      }
+
       // For each day in the plan, create workout entries
       for (const [dayName, dayData] of Object.entries(plan.plan_data.days)) {
         if (dayData.sessions.length === 0) continue
