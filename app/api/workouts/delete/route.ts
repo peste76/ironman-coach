@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Get authenticated user
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -19,8 +21,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Workout ID required" }, { status: 400 })
     }
 
-    // First, get the workout to check if it's from Strava and owned by user
-    const { data: workout, error: fetchError } = await supabase
+    // Use service role key for admin operations
+    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceRole) {
+      console.error("SUPABASE_SERVICE_ROLE_KEY not configured")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
+    const adminSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRole
+    )
+
+    // First, get the workout to verify ownership and type
+    const { data: workout, error: fetchError } = await adminSupabase
       .from("workouts")
       .select("strava_activity_id, user_id")
       .eq("id", id)
@@ -33,6 +47,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Workout not found" }, { status: 404 })
     }
 
+    // Verify user owns this workout
     if (workout.user_id !== user.id) {
       console.error("User does not own workout:", workout.user_id, "vs", user.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
@@ -43,23 +58,21 @@ export async function DELETE(request: NextRequest) {
     if (workout.strava_activity_id) {
       console.log("Doing soft delete for Strava workout")
       // Soft delete for Strava workouts - mark as user_deleted
-      const result = await supabase
+      const result = await adminSupabase
         .from("workouts")
         .update({
           user_deleted: true,
           updated_at: new Date().toISOString()
         })
         .eq("id", id)
-        .eq("user_id", user.id)
       error = result.error
     } else {
       console.log("Doing hard delete for manual workout")
       // Hard delete for manual workouts
-      const result = await supabase
+      const result = await adminSupabase
         .from("workouts")
         .delete()
         .eq("id", id)
-        .eq("user_id", user.id)
       error = result.error
       console.log("Hard delete result:", result)
     }
@@ -73,6 +86,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error("Unexpected error in delete API:", err)
-    return NextResponse.json({ error: `Unexpected error: ${err.message}` }, { status: 500 })
+    return NextResponse.json({ error: `Unexpected error: ${(err as Error).message}` }, { status: 500 })
   }
 }
