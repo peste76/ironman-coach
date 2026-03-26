@@ -301,7 +301,7 @@ export default function Dashboard() {
     setWorkouts(prev => prev.filter(w => w.id !== id))
     
     try {
-      const response = await fetch("/api/workout/delete", {
+      const response = await fetch("/api/training/delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
