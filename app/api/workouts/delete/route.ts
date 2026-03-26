@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function DELETE(request: NextRequest) {
   try {
-    console.log("NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log("SUPABASE_SERVICE_ROLE_KEY available:", !!process.env.SUPABASE_SERVICE_ROLE_KEY)
-    
     const supabase = await createClient()
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    let serviceSupabase = supabase
-    if (serviceKey) {
-      serviceSupabase = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        serviceKey
-      )
-    }
-    
-    console.log("Service key available:", !!serviceKey)
-    
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -34,7 +19,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Workout ID required" }, { status: 400 })
     }
 
-    // First, get the workout to check if it's from Strava
+    // First, get the workout to check if it's from Strava and owned by user
     const { data: workout, error: fetchError } = await supabase
       .from("workouts")
       .select("strava_activity_id, user_id")
@@ -57,22 +42,24 @@ export async function DELETE(request: NextRequest) {
 
     if (workout.strava_activity_id) {
       console.log("Doing soft delete for Strava workout")
-      // Soft delete for Strava workouts
-      const result = await serviceSupabase
+      // Soft delete for Strava workouts - mark as user_deleted
+      const result = await supabase
         .from("workouts")
         .update({
           user_deleted: true,
           updated_at: new Date().toISOString()
         })
         .eq("id", id)
+        .eq("user_id", user.id)
       error = result.error
     } else {
       console.log("Doing hard delete for manual workout")
       // Hard delete for manual workouts
-      const result = await serviceSupabase
+      const result = await supabase
         .from("workouts")
         .delete()
         .eq("id", id)
+        .eq("user_id", user.id)
       error = result.error
       console.log("Hard delete result:", result)
     }
@@ -80,18 +67,6 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       console.error("Error deleting workout:", error)
       return NextResponse.json({ error: `Failed to delete workout: ${error.message}` }, { status: 500 })
-    }
-
-    // Verify the workout is actually deleted
-    const { data: checkWorkout, error: checkError } = await serviceSupabase
-      .from("workouts")
-      .select("id")
-      .eq("id", id)
-      .single()
-
-    if (checkWorkout) {
-      console.error("Workout still exists after delete!")
-    return NextResponse.json({ error: `Delete failed - workout still exists. Service key available: ${!!serviceKey}` }, { status: 500 })
     }
 
     console.log("Workout deleted successfully")
