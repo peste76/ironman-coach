@@ -65,7 +65,7 @@ export function Sidebar({ user, isStravaConnected = false, onStravaSync, isSynci
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-[#EAECF0]">
         <div className="flex items-center justify-center w-10 h-10 bg-[#101828] rounded-lg">
-          <span className="text-white font-bold text-sm">TRI</span>
+          <img src="/placeholder-logo.png" alt="UNVRS TRI" className="w-6 h-6" />
         </div>
         <div>
           <h1 className="font-semibold text-[#101828] text-lg tracking-tight">UNVRS TRI</h1>
