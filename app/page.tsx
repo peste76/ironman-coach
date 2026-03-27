@@ -19,6 +19,17 @@ interface Workout {
   notes?: string
   date: Date
   strava_activity_id?: number | null
+  rpe?: number | null
+  tss?: number | null
+  training_load_score?: number | null
+  avg_heart_rate?: number | null
+  max_heart_rate?: number | null
+  avg_power?: number | null
+  elevation_gain?: number | null
+  avg_cadence?: number | null
+  strava_activity_type?: string | null
+  has_power_meter?: boolean
+  has_heart_rate_monitor?: boolean
 }
 
 interface DBWorkout {
@@ -31,6 +42,17 @@ interface DBWorkout {
   description: string | null
   date: string
   strava_activity_id: number | null
+  rpe?: number | null
+  tss?: number | null
+  training_load_score?: number | null
+  avg_heart_rate?: number | null
+  max_heart_rate?: number | null
+  avg_power?: number | null
+  elevation_gain?: number | null
+  avg_cadence?: number | null
+  strava_activity_type?: string | null
+  has_power_meter?: boolean
+  has_heart_rate_monitor?: boolean
 }
 
 function formatDuration(minutes: number | null): string | undefined {
@@ -80,6 +102,17 @@ function dbToWorkout(db: DBWorkout): Workout {
     notes: db.description || undefined,
     date: new Date(db.date + "T00:00:00"),
     strava_activity_id: db.strava_activity_id,
+    rpe: db.rpe ?? undefined,
+    tss: db.tss ?? undefined,
+    training_load_score: db.training_load_score ?? undefined,
+    avg_heart_rate: db.avg_heart_rate ?? undefined,
+    max_heart_rate: db.max_heart_rate ?? undefined,
+    avg_power: db.avg_power ?? undefined,
+    elevation_gain: db.elevation_gain ?? undefined,
+    avg_cadence: db.avg_cadence ?? undefined,
+    strava_activity_type: db.strava_activity_type ?? undefined,
+    has_power_meter: db.has_power_meter ?? undefined,
+    has_heart_rate_monitor: db.has_heart_rate_monitor ?? undefined,
   }
 }
 

@@ -24,6 +24,17 @@ interface Workout {
   duration_minutes?: number
   planned_distance_km?: number
   intensity?: string
+  rpe?: number | null
+  tss?: number | null
+  training_load_score?: number | null
+  avg_heart_rate?: number | null
+  max_heart_rate?: number | null
+  avg_power?: number | null
+  elevation_gain?: number | null
+  avg_cadence?: number | null
+  strava_activity_type?: string | null
+  has_power_meter?: boolean
+  has_heart_rate_monitor?: boolean
 }
 
 interface WorkoutDetailsModalProps {
@@ -92,13 +103,93 @@ export function WorkoutDetailsModal({ isOpen, onClose, workout }: WorkoutDetails
               </div>
             )}
 
-            {workout.intensity && (
+            {workout.strava_activity_type && (
               <div className="flex flex-col gap-1 text-sm">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Activity className="w-4 h-4" />
-                  <span>Intensità</span>
+                  <span>Tipo Strava</span>
                 </div>
-                <div className="font-medium capitalize">{workout.intensity}</div>
+                <div className="font-medium capitalize">{workout.strava_activity_type}</div>
+              </div>
+            )}
+
+            {workout.rpe && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>RPE</span>
+                </div>
+                <div className="font-medium">{workout.rpe}</div>
+              </div>
+            )}
+
+            {workout.tss && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>TSS</span>
+                </div>
+                <div className="font-medium">{workout.tss}</div>
+              </div>
+            )}
+
+            {workout.training_load_score && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>Load</span>
+                </div>
+                <div className="font-medium">{workout.training_load_score}</div>
+              </div>
+            )}
+
+            {workout.avg_heart_rate && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>FC media</span>
+                </div>
+                <div className="font-medium">{workout.avg_heart_rate} bpm</div>
+              </div>
+            )}
+
+            {workout.max_heart_rate && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>FC max</span>
+                </div>
+                <div className="font-medium">{workout.max_heart_rate} bpm</div>
+              </div>
+            )}
+
+            {workout.avg_power && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>Potenza media</span>
+                </div>
+                <div className="font-medium">{workout.avg_power} W</div>
+              </div>
+            )}
+
+            {workout.elevation_gain && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>Dislivello</span>
+                </div>
+                <div className="font-medium">{workout.elevation_gain} m</div>
+              </div>
+            )}
+
+            {workout.avg_cadence && (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <span>Cadenza</span>
+                </div>
+                <div className="font-medium">{workout.avg_cadence}</div>
               </div>
             )}
           </div>

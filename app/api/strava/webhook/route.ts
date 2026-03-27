@@ -37,6 +37,25 @@ export async function POST(request: Request) {
   return NextResponse.json({ status: "ok" })
 }
 
+async function refreshStravaToken(refreshToken: string) {
+  const response = await fetch("https://www.strava.com/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: process.env.STRAVA_CLIENT_ID,
+      client_secret: process.env.STRAVA_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to refresh Strava token")
+  }
+
+  return response.json()
+}
+
 export async function GET(request: Request) {
   // Strava webhook verification
   const { searchParams } = new URL(request.url)
@@ -69,14 +88,36 @@ async function handleActivityCreated(activityId: number) {
       const { data: userData } = await supabase.auth.admin.getUserById(profile.id)
       const metadata = userData.user?.user_metadata
       
-      if (!metadata?.strava_access_token) continue
+      if (!metadata?.strava_access_token || !metadata?.strava_refresh_token) continue
+
+      let accessToken = metadata.strava_access_token
+      const refreshToken = metadata.strava_refresh_token
+      const expiresAt = metadata.strava_token_expires_at
+
+      if (expiresAt && Date.now() / 1000 > expiresAt - 300) {
+        try {
+          const newTokens = await refreshStravaToken(refreshToken)
+          accessToken = newTokens.access_token
+
+          await supabase.auth.admin.updateUserById(profile.id, {
+            data: {
+              strava_access_token: newTokens.access_token,
+              strava_refresh_token: newTokens.refresh_token,
+              strava_token_expires_at: newTokens.expires_at,
+            }
+          })
+        } catch (refreshError) {
+          console.error(`Unable to refresh token for user ${profile.id}:`, refreshError)
+          continue
+        }
+      }
 
       // Fetch the specific activity from Strava
       const response = await fetch(
         `https://www.strava.com/api/v3/activities/${activityId}`,
         {
           headers: {
-            "Authorization": `Bearer ${metadata.strava_access_token}`,
+            "Authorization": `Bearer ${accessToken}`,
           },
         }
       )
@@ -98,9 +139,8 @@ async function handleActivityCreated(activityId: number) {
 }
 
 async function handleActivityUpdated(activityId: number) {
-  // Similar to create, but update existing activity
-  // Implementation would be similar to handleActivityCreated
-  console.log(`Activity ${activityId} updated - sync not implemented yet`)
+  // Reuse existing create flow for updates
+  await handleActivityCreated(activityId)
 }
 
 async function handleActivityDeleted(activityId: number) {

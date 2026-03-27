@@ -194,34 +194,50 @@ export async function POST() {
       return durationScore + intensityScore
     }
     
-    // Insert new activities with only existing database columns
+    // Insert / update activities with expanded fields for AI evaluation
     const workoutsToInsert = newActivities.map((activity: any) => {
       const rpe = calculateRPE(activity)
       const tss = calculateTSS(activity, rpe)
       const trainingLoadScore = calculateTrainingLoadScore(activity, tss, rpe)
+      const activityType = activity.sport_type || activity.type
       
       return {
         user_id: user.id,
         strava_activity_id: activity.id,
-        type: mapStravaType(activity.sport_type || activity.type),
-        sport: mapStravaType(activity.sport_type || activity.type),
+        type: mapStravaType(activityType),
+        sport: mapStravaType(activityType),
         title: activity.name,
         duration_minutes: Math.round(activity.moving_time / 60),
         planned_distance_km: activity.distance / 1000,
         date: activity.start_date_local.split("T")[0],
         description: activity.description || `Synced from Strava`,
+        notes: activity.description || null,
+        intensity: activity.average_heartrate ? `${Math.round(activity.average_heartrate)} bpm` : null,
+        rpe,
+        tss,
+        training_load_score: trainingLoadScore,
+        avg_heart_rate: activity.average_heartrate || null,
+        max_heart_rate: activity.max_heartrate || null,
+        avg_power: activity.average_watts || null,
+        elevation_gain: activity.total_elevation_gain || null,
+        avg_cadence: activity.average_cadence || null,
+        avg_speed: activity.average_speed || null,
+        max_speed: activity.max_speed || null,
+        strava_activity_type: activityType,
+        is_manual_entry: activity.manual || false,
+        has_power_meter: !!activity.average_watts,
+        has_heart_rate_monitor: !!activity.average_heartrate,
         strava_data: activity,
-        // Note: Advanced metrics (rpe, tss, etc.) will be added after schema migration
       }
     })
     
     if (workoutsToInsert.length > 0) {
       const { error } = await supabase
         .from("workouts")
-        .insert(workoutsToInsert)
+        .upsert(workoutsToInsert, { onConflict: "strava_activity_id" })
       
       if (error) {
-        console.error("Error inserting workouts:", error)
+        console.error("Error upserting workouts:", error)
         return NextResponse.json({ error: "Failed to save activities" }, { status: 500 })
       }
     }
