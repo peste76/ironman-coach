@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Disallow auth from Vercel protection
+# This file helps ensure Vercel doesn't apply password protection
