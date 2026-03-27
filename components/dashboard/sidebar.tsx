@@ -26,6 +26,7 @@ const navigation = [
   { name: "Analytics", icon: BarChart3, href: "/analytics", current: false },
   { name: "AI Plans", icon: Brain, href: "/training-plans", current: false },
   { name: "AI Profile", icon: Brain, href: "/profile/ai-setup", current: false },
+  { name: "Profile", icon: User, href: "/profile", current: false },
 ]
 
 const workoutTypes = [
@@ -160,9 +161,13 @@ export function Sidebar({ user, isStravaConnected = false, onStravaSync, isSynci
       {/* User Section */}
       <div className="border-t border-[#EAECF0] p-4">
         <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center">
+          <button 
+            onClick={() => router.push('/profile')}
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center hover:opacity-80 transition-opacity"
+            title="Vai al profilo"
+          >
             <User className="w-4 h-4 text-white" />
-          </div>
+          </button>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-[#101828] truncate">
               {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Athlete"}
