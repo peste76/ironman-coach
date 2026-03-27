@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AppLayout } from '@/components/app-layout'
 import './globals.css'
 
 const inter = Inter({ 
@@ -39,7 +40,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <AppLayout>
+          {children}
+        </AppLayout>
         <Analytics />
       </body>
     </html>

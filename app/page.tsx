@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
 import { CalendarGrid } from "@/components/dashboard/calendar-grid"
 import { AddWorkoutModal } from "@/components/dashboard/add-workout-modal"
@@ -187,8 +186,6 @@ export default function Dashboard() {
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [isStravaConnected, setIsStravaConnected] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
   
   // Check auth and load workouts
   useEffect(() => {
@@ -199,11 +196,6 @@ export default function Dashboard() {
         return
       }
       setUser(user)
-      
-      // Check if connected via Strava (either provider or manual connection)
-      const provider = user.app_metadata?.provider
-      const stravaConnected = user.user_metadata?.strava_connected
-      setIsStravaConnected(provider === "strava" || stravaConnected === true)
       
       // Load workouts from database (exclude user-deleted)
       const { data: workoutsData, error } = await supabase
@@ -258,32 +250,6 @@ export default function Dashboard() {
   const handleAddEvent = () => {
     setSelectedDate(new Date())
     setIsModalOpen(true)
-  }
-
-  const handleStravaSync = async () => {
-    setIsSyncing(true)
-    try {
-      const response = await fetch("/api/strava/sync", { method: "POST" })
-      const data = await response.json()
-      
-      if (response.ok && data.synced > 0) {
-        // Reload workouts from database (exclude deleted)
-        const { data: workoutsData } = await supabase
-          .from("workouts")
-          .select("*")
-          .eq("user_id", user?.id)
-          .eq("user_deleted", false)
-          .order("date", { ascending: true })
-        
-        if (workoutsData) {
-          setWorkouts(workoutsData.map(dbToWorkout))
-        }
-      }
-    } catch (err) {
-      console.error("Sync error:", err)
-    } finally {
-      setIsSyncing(false)
-    }
   }
 
   const handleAddWorkoutOnDate = useCallback((date: Date) => {
@@ -432,13 +398,7 @@ export default function Dashboard() {
   }
   
   return (
-    <div className="flex h-[100dvh] bg-white overflow-hidden">
-      <Sidebar 
-          user={user} 
-          isStravaConnected={isStravaConnected} 
-          onStravaSync={handleStravaSync}
-          isSyncing={isSyncing}
-        />
+    <>
       {/* 
         Add pb-16 to the main container on mobile to account for the bottom navigation bar
         This prevents the calendar grid content from being hidden under the nav bar
@@ -475,6 +435,6 @@ export default function Dashboard() {
         onAdd={handleAddWorkout}
         selectedDate={selectedDate}
       />
-    </div>
+    </>
   )
 }
