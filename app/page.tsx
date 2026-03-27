@@ -339,7 +339,7 @@ export default function Dashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, strava_activity_id: workout.strava_activity_id }),
       })
       
       if (!response.ok) {

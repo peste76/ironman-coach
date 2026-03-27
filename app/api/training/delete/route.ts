@@ -11,10 +11,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const { id } = await request.json()
+    const { id, strava_activity_id } = await request.json()
 
-    if (!id) {
-      return NextResponse.json({ error: "Workout ID required" }, { status: 400 })
+    if (!id && !strava_activity_id) {
+      return NextResponse.json({ error: "Workout ID or strava_activity_id required" }, { status: 400 })
     }
 
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -27,13 +27,35 @@ export async function POST(request: NextRequest) {
       serviceRole
     )
 
-    const { data: workout, error: fetchError } = await adminSupabase
-      .from("workouts")
-      .select("strava_activity_id, user_id")
-      .eq("id", id)
-      .single()
+    let workout: any = null
+    let fetchError: any = null
 
-    if (fetchError || !workout) {
+    if (id) {
+      const res = await adminSupabase
+        .from("workouts")
+        .select("id, strava_activity_id, user_id")
+        .eq("id", id)
+        .maybeSingle()
+      workout = res.data
+      fetchError = res.error
+    }
+
+    if (!workout && strava_activity_id) {
+      const res = await adminSupabase
+        .from("workouts")
+        .select("id, strava_activity_id, user_id")
+        .eq("strava_activity_id", strava_activity_id)
+        .maybeSingle()
+      workout = res.data
+      fetchError = res.error
+    }
+
+    if (fetchError) {
+      console.error("Fetch error during workout query:", fetchError)
+      return NextResponse.json({ error: "Workout lookup failed" }, { status: 500 })
+    }
+
+    if (!workout) {
       return NextResponse.json({ error: "Workout not found" }, { status: 404 })
     }
 
@@ -42,6 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     let error
+    const workoutId = workout.id
 
     if (workout.strava_activity_id) {
       const result = await adminSupabase
@@ -50,7 +73,7 @@ export async function POST(request: NextRequest) {
           user_deleted: true,
           updated_at: new Date().toISOString()
         })
-        .eq("id", id)
+        .eq("id", workoutId)
       error = result.error
     } else {
       const result = await adminSupabase
