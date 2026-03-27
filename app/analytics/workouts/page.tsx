@@ -10,11 +10,6 @@ interface Workout {
   type: string
   duration_minutes: number | null
   planned_distance_km: number | null
-  rpe: number | null
-  tss: number | null
-  training_load_score: number | null
-  avg_heart_rate: number | null
-  elevation_gain: number | null
   strava_activity_type: string | null
   strava_activity_id?: number | null
 }
@@ -33,9 +28,8 @@ export default function WorkoutsAnalytics() {
         const { data, error: fetchError } = await supabase
           .from("workouts")
           .select(
-            "id, date, title, type, duration_minutes, planned_distance_km, rpe, tss, training_load_score, avg_heart_rate, elevation_gain, strava_activity_type, strava_activity_id"
+            "id, date, title, type, duration_minutes, planned_distance_km, strava_activity_type, strava_activity_id"
           )
-          .eq("user_deleted", false)
           .order("date", { ascending: false })
 
         if (fetchError) throw fetchError
@@ -59,18 +53,14 @@ export default function WorkoutsAnalytics() {
 
       {!loading && !error && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div className="p-4 border rounded-lg bg-white">
               <div className="text-gray-500 text-xs">Totale workout</div>
               <div className="text-xl font-semibold">{workouts.length}</div>
             </div>
             <div className="p-4 border rounded-lg bg-white">
-              <div className="text-gray-500 text-xs">TSS medio</div>
-              <div className="text-xl font-semibold">{Math.round((workouts.reduce((sum, w) => sum + (w.tss || 0), 0) / Math.max(1, workouts.length)) * 10) / 10}</div>
-            </div>
-            <div className="p-4 border rounded-lg bg-white">
-              <div className="text-gray-500 text-xs">RPE medio</div>
-              <div className="text-xl font-semibold">{Math.round((workouts.reduce((sum, w) => sum + (w.rpe || 0), 0) / Math.max(1, workouts.filter(w => w.rpe !== null).length || 1)) * 10) / 10}</div>
+              <div className="text-gray-500 text-xs">Durata totale (min)</div>
+              <div className="text-xl font-semibold">{workouts.reduce((sum, w) => sum + (w.duration_minutes || 0), 0)}</div>
             </div>
             <div className="p-4 border rounded-lg bg-white">
               <div className="text-gray-500 text-xs">Distanza totale (km)</div>
@@ -86,11 +76,6 @@ export default function WorkoutsAnalytics() {
                 <th className="px-2 py-1 text-xs">Tipo</th>
                 <th className="px-2 py-1 text-xs">Durata</th>
                 <th className="px-2 py-1 text-xs">Distanza</th>
-                <th className="px-2 py-1 text-xs">RPE</th>
-                <th className="px-2 py-1 text-xs">TSS</th>
-                <th className="px-2 py-1 text-xs">Load</th>
-                <th className="px-2 py-1 text-xs">FC</th>
-                <th className="px-2 py-1 text-xs">Elev.</th>
               </tr>
             </thead>
             <tbody>
@@ -101,11 +86,6 @@ export default function WorkoutsAnalytics() {
                   <td className="px-2 py-1 text-xs">{w.strava_activity_type || w.type}</td>
                   <td className="px-2 py-1 text-xs">{w.duration_minutes ?? "-"}</td>
                   <td className="px-2 py-1 text-xs">{w.planned_distance_km ?? "-"}</td>
-                  <td className="px-2 py-1 text-xs">{w.rpe ?? "-"}</td>
-                  <td className="px-2 py-1 text-xs">{w.tss ?? "-"}</td>
-                  <td className="px-2 py-1 text-xs">{w.training_load_score ?? "-"}</td>
-                  <td className="px-2 py-1 text-xs">{w.avg_heart_rate ?? "-"}</td>
-                  <td className="px-2 py-1 text-xs">{w.elevation_gain ?? "-"}</td>
                 </tr>
               ))}
             </tbody>
