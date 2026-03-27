@@ -13,6 +13,8 @@ interface Workout {
   distance?: string
   notes?: string
   strava_activity_id?: number | null
+  rpe?: number | null
+  tss?: number | null
 }
 
 interface WorkoutCardProps {
@@ -94,6 +96,12 @@ export function WorkoutCard({ workout, onDelete, onClick, draggable, onDragStart
       )}
       {workout.duration && (
         <span className="hidden md:block text-[10px] opacity-70 shrink-0">{workout.duration}</span>
+      )}
+      {workout.rpe && (
+        <span className="hidden md:block text-[10px] opacity-70 ml-1">RPE {workout.rpe}</span>
+      )}
+      {workout.tss && (
+        <span className="hidden md:block text-[10px] opacity-70 ml-1">TSS {workout.tss}</span>
       )}
       {isFromStrava && (
         <svg className="w-3 h-3 shrink-0 text-[#FC4C02]" viewBox="0 0 24 24" fill="currentColor">

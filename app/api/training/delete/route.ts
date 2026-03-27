@@ -27,32 +27,21 @@ export async function POST(request: NextRequest) {
       serviceRole
     )
 
-    let workout: any = null
-    let fetchError: any = null
+    // Use either id or strava_activity_id search to avoid 404 loops
+    const workoutQuery = adminSupabase
+      .from("workouts")
+      .select("id, strava_activity_id, user_id")
+      .or(
+        id ? `id.eq.${id}${strava_activity_id ? `,strava_activity_id.eq.${strava_activity_id}` : ""}` :
+        `strava_activity_id.eq.${strava_activity_id}`
+      )
+      .maybeSingle()
 
-    if (id) {
-      const res = await adminSupabase
-        .from("workouts")
-        .select("id, strava_activity_id, user_id")
-        .eq("id", id)
-        .maybeSingle()
-      workout = res.data
-      fetchError = res.error
-    }
-
-    if (!workout && strava_activity_id) {
-      const res = await adminSupabase
-        .from("workouts")
-        .select("id, strava_activity_id, user_id")
-        .eq("strava_activity_id", strava_activity_id)
-        .maybeSingle()
-      workout = res.data
-      fetchError = res.error
-    }
+    const { data: workout, error: fetchError } = await workoutQuery
 
     if (fetchError) {
       console.error("Fetch error during workout query:", fetchError)
-      return NextResponse.json({ error: "Workout lookup failed" }, { status: 500 })
+      return NextResponse.json({ error: `Workout lookup failed: ${fetchError.message}` }, { status: 500 })
     }
 
     if (!workout) {
