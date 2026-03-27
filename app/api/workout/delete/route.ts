@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   return handleDelete(request)
@@ -29,17 +28,8 @@ async function handleDelete(request: NextRequest) {
       return NextResponse.json({ error: "Workout ID required" }, { status: 400 })
     }
 
-    // Use service role key for admin operations
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceRole) {
-      console.error("SUPABASE_SERVICE_ROLE_KEY not configured")
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
-    }
-
-    const adminSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRole
-    )
+    // No service key needed — use the authenticated server-side client and RLS
+    const adminSupabase = supabase
 
     // First, get the workout to verify ownership and type
     const { data: workout, error: fetchError } = await adminSupabase

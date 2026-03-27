@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,15 +16,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Workout ID or strava_activity_id required" }, { status: 400 })
     }
 
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceRole) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
-    }
-
-    const adminSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRole
-    )
+    // Use the authenticated server-side client (RLS) so we don't depend on SERVICE_ROLE in production.
+    const adminSupabase = supabase
 
     // Use either id or strava_activity_id search to avoid 404 loops
     const workoutQuery = adminSupabase

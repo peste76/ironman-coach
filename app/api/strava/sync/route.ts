@@ -19,6 +19,19 @@ function mapStravaType(stravaType: string): WorkoutType {
   return typeMap[stravaType] || "strength"
 }
 
+function formatStravaSummary(activity: any): string {
+  const type = activity.sport_type || activity.type || 'Unknown'
+  const distanceKm = activity.distance ? (activity.distance / 1000).toFixed(2) : 'n/a'
+  const durationMin = activity.moving_time ? Math.round(activity.moving_time / 60) : 0
+  const avgHrt = activity.average_heartrate ? `${Math.round(activity.average_heartrate)} bpm` : 'n/a'
+  const maxHrt = activity.max_heartrate ? `${Math.round(activity.max_heartrate)} bpm` : 'n/a'
+  const avgPwd = activity.average_watts ? `${Math.round(activity.average_watts)} W` : 'n/a'
+  const elevation = activity.total_elevation_gain ?? 'n/a'
+  const cadence = activity.average_cadence ? `${Math.round(activity.average_cadence)} rpm` : 'n/a'
+
+  return `Strava sync details:\n- Type: ${type}\n- Distance: ${distanceKm} km\n- Duration: ${durationMin} min\n- Avg HR: ${avgHrt}\n- Max HR: ${maxHrt}\n- Avg Power: ${avgPwd}\n- Elevation: ${elevation} m\n- Cadence: ${cadence}`
+}
+
 async function refreshStravaToken(refreshToken: string) {
   const response = await fetch("https://www.strava.com/oauth/token", {
     method: "POST",
@@ -210,8 +223,8 @@ export async function POST() {
         duration_minutes: Math.round(activity.moving_time / 60),
         planned_distance_km: activity.distance / 1000,
         date: activity.start_date_local.split("T")[0],
-        description: activity.description || `Synced from Strava`,
-        notes: activity.description || null,
+        description: activity.description || formatStravaSummary(activity),
+        notes: activity.description || formatStravaSummary(activity),
         intensity: activity.average_heartrate ? `${Math.round(activity.average_heartrate)} bpm` : null,
         rpe,
         tss,

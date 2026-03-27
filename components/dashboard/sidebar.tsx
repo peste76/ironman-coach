@@ -20,10 +20,10 @@ import { useRouter } from "next/navigation"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const navigation = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "#", current: false },
-  { name: "Calendar", icon: Calendar, href: "#", current: true },
-  { name: "Workouts", icon: Activity, href: "#", current: false },
-  { name: "Analytics", icon: BarChart3, href: "#", current: false },
+  { name: "Dashboard", icon: LayoutDashboard, href: "/", current: false },
+  { name: "Calendar", icon: Calendar, href: "/", current: true },
+  { name: "Workouts", icon: Activity, href: "/analytics/workouts", current: false },
+  { name: "Analytics", icon: BarChart3, href: "/analytics", current: false },
   { name: "AI Plans", icon: Brain, href: "/training-plans", current: false },
   { name: "AI Profile", icon: Brain, href: "/profile/ai-setup", current: false },
 ]
