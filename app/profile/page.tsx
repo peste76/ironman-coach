@@ -42,6 +42,8 @@ interface AthleteProfile {
     completedWorkouts: number
     plannedWorkouts: number
   }
+  avgPace: number
+  runWorkoutsCount: number
 }
 
 export default function ProfilePage() {
@@ -49,6 +51,13 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Helper function to format pace
+  const formatPace = (minutesPerKm: number): string => {
+    const mins = Math.floor(minutesPerKm)
+    const secs = Math.round((minutesPerKm - mins) * 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -74,14 +83,20 @@ export default function ProfilePage() {
         const totalDistance = workouts?.reduce((sum, w) => sum + (w.planned_distance_km || 0), 0) || 0
         const totalDuration = workouts?.reduce((sum, w) => sum + (w.duration_minutes || 0), 0) || 0
 
-        // Calculate training phase (simple logic based on recent activity)
-        const recentWorkouts = workouts?.slice(0, 4) || []
+        // Calculate training phase based on actual training plan structure
         let currentPhase = "Base"
-        if (recentWorkouts.length >= 3) {
-          const avgIntensity = recentWorkouts.length > 0 ? 1 : 0
-          if (avgIntensity > 0.7) currentPhase = "Peak"
-          else if (avgIntensity > 0.5) currentPhase = "Build"
-          else currentPhase = "Base"
+        const weeksSinceStart = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7))
+        
+        // Typical Ironman 20-week structure:
+        // Weeks 1-8: Base
+        // Weeks 9-16: Build  
+        // Weeks 17-20: Peak/Taper
+        if (weeksSinceStart <= 8) {
+          currentPhase = "Base"
+        } else if (weeksSinceStart <= 16) {
+          currentPhase = "Build"
+        } else {
+          currentPhase = "Peak"
         }
 
         // Calculate days to race (mock data - should come from user profile)
@@ -93,14 +108,38 @@ export default function ProfilePage() {
         const fatigueLevel = Math.min(100, (totalDuration / 60) * 3)
         const formLevel = Math.max(0, Math.min(100, fitnessLevel - fatigueLevel + 50))
 
-        // Pace zones (based on user level - simplified)
-        const userLevel = totalWorkouts > 20 ? "intermediate" : "beginner"
+        // Calculate pace zones based on recent running performance
+        const runWorkouts = workouts?.filter(w => w.type === 'run' && w.planned_distance_km && w.duration_minutes) || []
+        let userLevel = "beginner"
+        let avgPace = 6.0 // default 6:00/km
+        
+        if (runWorkouts.length > 0) {
+          // Calculate average pace from recent runs
+          const totalKm = runWorkouts.reduce((sum, w) => sum + (w.planned_distance_km || 0), 0)
+          const totalMin = runWorkouts.reduce((sum, w) => sum + (w.duration_minutes || 0), 0)
+          avgPace = totalMin / totalKm // minutes per km
+          
+          // Determine level based on pace
+          if (avgPace <= 4.5) userLevel = "advanced"
+          else if (avgPace <= 5.5) userLevel = "intermediate" 
+          else userLevel = "beginner"
+        }
+        
+        // Helper function to format pace
+        function formatPace(minutesPerKm: number): string {
+          const mins = Math.floor(minutesPerKm)
+          const secs = Math.round((minutesPerKm - mins) * 60)
+          return `${mins}:${secs.toString().padStart(2, '0')}`
+        }
+
+        // Calculate zones based on user's average pace
+        const basePace = avgPace
         const paceZones = {
-          zone1: userLevel === "beginner" ? "6:30-7:00" : "5:45-6:15",
-          zone2: userLevel === "beginner" ? "6:00-6:30" : "5:15-5:45",
-          zone3: userLevel === "beginner" ? "5:30-6:00" : "4:45-5:15",
-          zone4: userLevel === "beginner" ? "5:00-5:30" : "4:15-4:45",
-          zone5: userLevel === "beginner" ? "4:30-5:00" : "3:45-4:15"
+          zone1: `${formatPace(basePace + 1.0)}-${formatPace(basePace + 0.5)}`,
+          zone2: `${formatPace(basePace + 0.3)}-${formatPace(basePace + 1.0)}`,
+          zone3: `${formatPace(basePace - 0.2)}-${formatPace(basePace + 0.3)}`,
+          zone4: `${formatPace(basePace - 0.7)}-${formatPace(basePace - 0.2)}`,
+          zone5: `${formatPace(basePace - 1.2)}-${formatPace(basePace - 0.7)}`
         }
 
         // Weekly progress
@@ -131,7 +170,9 @@ export default function ProfilePage() {
             totalWeeks,
             completedWorkouts: thisWeekWorkouts,
             plannedWorkouts: 5 // Typical weekly workouts
-          }
+          },
+          avgPace,
+          runWorkoutsCount: runWorkouts.length
         })
       } catch (err) {
         setError((err as Error).message)
@@ -279,6 +320,12 @@ export default function ProfilePage() {
             <Zap className="w-5 h-5 text-yellow-500" />
             Zone di Passo (Corsa)
           </h2>
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Calcolate basandosi sul tuo passo medio:</strong> {formatPace(profile.avgPace)}/km
+              {profile.runWorkoutsCount > 0 && ` (da ${profile.runWorkoutsCount} corse recenti)`}
+            </p>
+          </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <div className="flex items-center gap-3">
