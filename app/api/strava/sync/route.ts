@@ -126,92 +126,23 @@ export async function POST() {
     console.log(`Filtered ${filteredActivities.length} activities from ${activities.length} total`)
     
     // Get existing Strava activities to avoid duplicates
-    // Also get user_deleted activities to prevent re-import
     const { data: existingWorkouts } = await supabase
       .from("workouts")
-      .select("strava_activity_id, user_deleted")
+      .select("strava_activity_id")
       .eq("user_id", user.id)
       .not("strava_activity_id", "is", null)
     
-    // Create sets for efficient lookup
-    const existingStravaIds = new Set(
-      existingWorkouts
-        ?.filter(w => !w.user_deleted) // Only non-deleted
-        .map(w => w.strava_activity_id) || []
-    )
+    const existingStravaIds = new Set(existingWorkouts?.map(w => w.strava_activity_id) || [])
     
-    const deletedStravaIds = new Set(
-      existingWorkouts
-        ?.filter(w => w.user_deleted) // User-deleted ones
-        .map(w => w.strava_activity_id) || []
-    )
-    
-    // Filter out already synced activities AND user-deleted activities
+    // Filter out already synced activities
     const newActivities = filteredActivities.filter(
-      (a: { id: number }) => !existingStravaIds.has(a.id) && !deletedStravaIds.has(a.id)
+      (a: { id: number }) => !existingStravaIds.has(a.id)
     )
     
-    console.log(`Found ${newActivities.length} new activities to import (skipped ${deletedStravaIds.size} user-deleted)`)
+    console.log(`Found ${newActivities.length} new activities to import`)
     
-    // Training calculation functions
-    function calculateRPE(activity: any): number {
-      const type = activity.sport_type || activity.type
-      const duration = activity.moving_time / 60 // minutes
-      const distance = activity.distance / 1000 // km
-      
-      // Base RPE by activity type
-      let baseRPE = 3
-      if (type === 'Ride' || type === 'VirtualRide') {
-        baseRPE = distance > 50 ? 6 : distance > 25 ? 5 : 4
-      } else if (type === 'Run' || type === 'VirtualRun') {
-        baseRPE = distance > 10 ? 7 : distance > 5 ? 6 : 5
-      } else if (type === 'Swim') {
-        baseRPE = distance > 2 ? 6 : distance > 1 ? 5 : 4
-      } else if (type === 'WeightTraining' || type === 'Workout') {
-        baseRPE = duration > 60 ? 6 : duration > 30 ? 5 : 4
-      }
-      
-      // Adjust based on heart rate if available
-      if (activity.average_heartrate) {
-        const maxHR = 220 - 30 // Assuming 30 years old, should be calculated from user profile
-        const hrPercent = (activity.average_heartrate / maxHR) * 100
-        if (hrPercent > 85) baseRPE += 2
-        else if (hrPercent > 75) baseRPE += 1
-        else if (hrPercent < 60) baseRPE -= 1
-      }
-      
-      return Math.max(1, Math.min(10, baseRPE))
-    }
-    
-    function calculateTSS(activity: any, rpe: number): number {
-      const duration = activity.moving_time / 60 // minutes
-      const type = activity.sport_type || activity.type
-      
-      // Simplified TSS calculation: duration * intensity factor
-      let intensityFactor = rpe / 10
-      
-      // Adjust intensity factor by activity type
-      if (type === 'Ride' || type === 'VirtualRide') {
-        intensityFactor *= 1.2 // Cycling typically higher sustained intensity
-      } else if (type === 'Swim') {
-        intensityFactor *= 0.8 // Swimming typically lower impact
-      }
-      
-      return Math.round(duration * intensityFactor * 10)
-    }
-    
-    function calculateTrainingLoadScore(activity: any, tss: number, rpe: number): number {
-      // Combined training load score (0-100)
-      const durationScore = Math.min((activity.moving_time / 60) / 120 * 50, 50) // Max 50 points for 2h+
-      const intensityScore = rpe * 5 // Max 50 points for RPE 10
-      return durationScore + intensityScore
-    }
-    
-    // Insert / update activities with expanded fields for AI evaluation
+    // Insert new activities with basic columns only
     const workoutsToInsert = newActivities.map((activity: any) => {
-      const rpe = calculateRPE(activity)
-      const tss = calculateTSS(activity, rpe)
-      const trainingLoadScore = calculateTrainingLoadScore(activity, tss, rpe)
       const activityType = activity.sport_type || activity.type
       
       return {
@@ -224,22 +155,6 @@ export async function POST() {
         planned_distance_km: activity.distance / 1000,
         date: activity.start_date_local.split("T")[0],
         description: activity.description || formatStravaSummary(activity),
-        notes: activity.description || formatStravaSummary(activity),
-        intensity: activity.average_heartrate ? `${Math.round(activity.average_heartrate)} bpm` : null,
-        rpe,
-        tss,
-        training_load_score: trainingLoadScore,
-        avg_heart_rate: activity.average_heartrate || null,
-        max_heart_rate: activity.max_heartrate || null,
-        avg_power: activity.average_watts || null,
-        elevation_gain: activity.total_elevation_gain || null,
-        avg_cadence: activity.average_cadence || null,
-        avg_speed: activity.average_speed || null,
-        max_speed: activity.max_speed || null,
-        strava_activity_type: activityType,
-        is_manual_entry: activity.manual || false,
-        has_power_meter: !!activity.average_watts,
-        has_heart_rate_monitor: !!activity.average_heartrate,
         strava_data: activity,
       }
     })
